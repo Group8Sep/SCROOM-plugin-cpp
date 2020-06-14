@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.15)
+# cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 2.8.7)
 
 project(Scroom LANGUAGES CXX)
 
@@ -6,7 +7,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules")
 include(UseBackportedModules)
 include(GetGitRevisionDescription)
 
-include(cmake/ProjectVersion.cmake)
 include(cmake/StandardProjectSettings.cmake)
 
 set(PLUGIN_INSTALL_LOCATION_RELATIVE "lib/scroom")
