@@ -88,6 +88,19 @@ BOOST_AUTO_TEST_CASE(slipresentation_load_sli_xoffset) {
   dummyRedraw(presentation);
 }
 
+BOOST_AUTO_TEST_CASE(slipresentation_load_sli_varnish) {
+  SliPresentation::Ptr presentation = createPresentation();
+  presentation->load(testFileDir + "sli_varnish.sli");
+  std::cout << presentation->getLayers().size() << '\n';
+  BOOST_REQUIRE(presentation->getLayers().size() == SLI_NOF_LAYERS);
+}
+
+BOOST_AUTO_TEST_CASE(slipresentation_load_sli_varnish_wrongpath) {
+  SliPresentation::Ptr presentation = createPresentation();
+  presentation->load(testFileDir + "sli_varnish_wrongpath.sli");
+  BOOST_REQUIRE(presentation->getLayers().size() == 0);
+}
+
 BOOST_AUTO_TEST_CASE(slipresentation_presentationinterface_inherited) {
   std::string testFilePath = testFileDir + "sli_xoffset.sli";
   SliPresentation::Ptr presentation = createPresentation();
@@ -146,6 +159,105 @@ BOOST_AUTO_TEST_CASE(slipresentation_pipette_tool_one_color) {
   Scroom::Utils::Rectangle<int> rect4{1, 1, 1, 1};
   result = presentation->getPixelAverages(rect4);
   BOOST_REQUIRE(abs(result[3].second - 255) < 0.0001);
+}
+
+BOOST_AUTO_TEST_CASE(slipresentation_pipette_tool_zero_area) {
+  SliPresentation::Ptr presentation = createPresentation();
+  presentation->load(testFileDir + "sli_pipette.sli");
+  BOOST_REQUIRE(presentation->getLayers().size() == 1);
+  dummyRedraw(presentation);
+
+  Scroom::Utils::Rectangle<int> rect1 {0, 0, 0, 0};
+  auto result = presentation->getPixelAverages(rect1);
+  BOOST_REQUIRE(result.empty());
+}
+
+BOOST_AUTO_TEST_CASE(slipresentation_clearbottomsurface_all_toggled) {
+  SliPresentation::Ptr presentation = createPresentation();
+
+  presentation->load(testFileDir + "sli_tiffonly.sli");
+  dummyRedraw(presentation);
+  presentation->source->toggled = boost::dynamic_bitset<> {SLI_NOF_LAYERS}.set();
+  presentation->source->clearBottomSurface();
+  int total_height = presentation->source->total_height;
+  int total_width = presentation->source->total_width;
+  bool allZero = true;
+  auto surface = presentation->source->rgbCache[0]->getBitmap();
+  for (int i = 0; i < total_height*total_width*4; i++)
+  {
+    if (surface[i] != 0)
+    {
+      allZero = false;
+      break;
+    }
+  }
+  BOOST_REQUIRE(allZero == true);
+}
+
+BOOST_AUTO_TEST_CASE(slipresentation_clearbottomsurface_none_toggled) {
+  SliPresentation::Ptr presentation1 = createPresentation();
+  SliPresentation::Ptr presentation2 = createPresentation();
+
+  presentation1->load(testFileDir + "sli_tiffonly.sli");
+  presentation2->load(testFileDir + "sli_tiffonly.sli");
+  dummyRedraw(presentation1);
+  dummyRedraw(presentation2);
+  presentation1->source->toggled = boost::dynamic_bitset<> {SLI_NOF_LAYERS};
+  presentation1->source->clearBottomSurface();
+  int total_height = presentation1->source->total_height;
+  int total_width = presentation1->source->total_width;
+  auto surface1 = presentation1->source->rgbCache[0]->getBitmap();
+  auto surface2 = presentation2->source->rgbCache[0]->getBitmap();
+  bool bothEqual = true;
+  for (int i = 0; i < total_height*total_width*4; i++)
+  {
+    if (surface1[i] != surface2[i])
+    {
+      bothEqual = false;
+      break;
+    }
+  }
+  BOOST_REQUIRE(bothEqual == true);
+}
+
+BOOST_AUTO_TEST_CASE(slipresentation_clearbottomsurface_some_toggled) {
+  SliPresentation::Ptr presentation1 = createPresentation();
+  SliPresentation::Ptr presentation2 = createPresentation();
+
+  presentation1->load(testFileDir + "sli_tiffonly.sli");
+  presentation2->load(testFileDir + "sli_tiffonly.sli");
+  dummyRedraw(presentation1);
+  dummyRedraw(presentation2);
+  presentation1->source->toggled = boost::dynamic_bitset<> {SLI_NOF_LAYERS}.set(0);
+  presentation1->source->clearBottomSurface();
+  int height = presentation1->source->layers[0]->height;
+  int width = presentation1->source->layers[0]->width;
+  int total_height = presentation1->source->total_height;
+  int total_width = presentation1->source->total_width;
+  auto surface1 = presentation1->source->rgbCache[0]->getBitmap();
+  auto surface2 = presentation2->source->rgbCache[0]->getBitmap();
+
+  bool someZero = true;
+  for (int i = 0; i < height*width*4; i++)
+  {
+    if (surface1[i] != 0)
+    {
+      someZero = false;
+      break;
+    }
+  }
+  BOOST_REQUIRE(someZero == true);
+
+  bool bothEqual = true;
+  for (int i = height*width*4; i < total_height*total_width*4; i++)
+  {
+    if (surface1[i] != surface2[i])
+    {
+      bothEqual = false;
+      break;
+    }
+  }
+  BOOST_REQUIRE(bothEqual == true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
