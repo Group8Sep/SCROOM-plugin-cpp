@@ -6,13 +6,23 @@
 
 #include "../sepsource.hh"
 #include "../sli/slilayer.hh"
+namespace utf = boost::unit_test;
+static boost::filesystem::path testFileDir;
 
-const auto testFileDir =
-    boost::dll::program_location().parent_path().parent_path() / "testfiles";
+struct F {
+    F()  { BOOST_TEST_MESSAGE( "setup fixture" );
+        if (boost::unit_test::framework::master_test_suite().argc < 2){
+            testFileDir =  boost::dll::program_location().parent_path().parent_path() / "testfiles";
+        } else {
+            testFileDir = boost::unit_test::framework::master_test_suite().argv[1];
+        }
+    }
+    ~F() { BOOST_TEST_MESSAGE( "teardown fixture" ); }
+};
 
 /** Test cases for sepsource.hh */
 
-BOOST_AUTO_TEST_SUITE(SepSource_Tests)
+BOOST_AUTO_TEST_SUITE(SepSource_Tests, * utf::fixture<F>())
 
 BOOST_AUTO_TEST_CASE(sepsource_create) {
   auto source = SepSource::create();

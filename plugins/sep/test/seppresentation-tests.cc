@@ -2,17 +2,29 @@
 #include <boost/test/unit_test.hpp>
 #include <cmath>
 
+
 // Make all private members accessible for testing
 #define private public
 
 #include "../seppresentation.hh"
+namespace utf = boost::unit_test;
 
-const auto testFileDir =
-    boost::dll::program_location().parent_path().parent_path() / "testfiles";
+static boost::filesystem::path testFileDir;
+
+struct F {
+    F()  { BOOST_TEST_MESSAGE( "setup fixture" );
+        if (boost::unit_test::framework::master_test_suite().argc < 2){
+            testFileDir =  boost::dll::program_location().parent_path().parent_path() / "testfiles";
+        } else {
+            testFileDir = boost::unit_test::framework::master_test_suite().argv[1];
+        }
+    }
+    ~F() { BOOST_TEST_MESSAGE( "teardown fixture" ); }
+};
 
 /** Test cases for seppresentation.hh */
 
-BOOST_AUTO_TEST_SUITE(SepPresentation_Tests)
+BOOST_AUTO_TEST_SUITE(SepPresentation_Tests, * utf::fixture<F>())
 
 BOOST_AUTO_TEST_CASE(seppresentation_create) {
   SepPresentation::Ptr presentation = SepPresentation::create();

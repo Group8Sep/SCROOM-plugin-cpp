@@ -9,10 +9,20 @@
 #include <scroom/scroominterface.hh>
 
 #define SLI_NOF_LAYERS 4
+namespace utf = boost::unit_test;
+static std::string testFileDir;
 
-const std::string testFileDir =
-    boost::dll::program_location().parent_path().parent_path().string() +
-    "/testfiles/";
+struct F {
+    F()  { BOOST_TEST_MESSAGE( "setup fixture" );
+        if (boost::unit_test::framework::master_test_suite().argc < 2){
+            testFileDir =  (boost::dll::program_location().parent_path().parent_path() / "testfiles").string();
+        } else {
+            testFileDir = boost::unit_test::framework::master_test_suite().argv[1];
+        }
+    }
+    ~F() { BOOST_TEST_MESSAGE( "teardown fixture" ); }
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Helper functions
@@ -51,7 +61,7 @@ void dummyRedraw(SliPresentation::Ptr presentation) {
 ///////////////////////////////////////////////////////////////////////////////
 // Tests
 
-BOOST_AUTO_TEST_SUITE(Sli_Tests)
+BOOST_AUTO_TEST_SUITE(Sli_Tests, * utf::fixture<F>())
 
 BOOST_AUTO_TEST_CASE(slipresentation_load_sli_tiffonly) {
   SliPresentation::Ptr presentation = createPresentation();

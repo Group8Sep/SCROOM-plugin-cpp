@@ -8,10 +8,20 @@
 #include "../varnish/varnish.hh"
 #include <scroom/scroominterface.hh>
 #include <scroom/viewinterface.hh>
+namespace utf = boost::unit_test;
+static std::string testFileDir;
 
-const std::string testFileDir =
-    boost::dll::program_location().parent_path().parent_path().string() +
-    "/testfiles/";
+struct F {
+    F()  { BOOST_TEST_MESSAGE( "setup fixture" );
+        if (boost::unit_test::framework::master_test_suite().argc < 2){
+            testFileDir =  (boost::dll::program_location().parent_path().parent_path() / "testfiles").string();
+        } else {
+            testFileDir = boost::unit_test::framework::master_test_suite().argv[1];
+        }
+    }
+    ~F() { BOOST_TEST_MESSAGE( "teardown fixture" ); }
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Helper object
@@ -145,7 +155,7 @@ BOOST_AUTO_TEST_SUITE_END()
 ///////////////////////////////////////////////////////////////////////////////
 // Tests for varnish loading
 
-BOOST_AUTO_TEST_SUITE(varnish_tests)
+BOOST_AUTO_TEST_SUITE(varnish_tests, * utf::fixture<F>())
 
 BOOST_AUTO_TEST_CASE(varnish_load_valid_tiff) {
   SliLayer::Ptr test_varnishLayer =
