@@ -29,7 +29,7 @@ public:
     return INSTANCE;
   }
 
-  std::vector<CustomColor*> getDefinedColors();
+  std::vector<CustomColor *> getDefinedColors();
   CustomColor *getColorByNameOrAlias(std::string name);
   void loadFile(std::string file = "colours.json");
 

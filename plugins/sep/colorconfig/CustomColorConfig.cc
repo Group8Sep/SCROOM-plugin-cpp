@@ -108,7 +108,9 @@ CustomColor *ColorConfig::getColorByNameOrAlias(std::string name) {
   return nullptr;
 }
 
-std::vector<CustomColor*> ColorConfig::getDefinedColors() { return colorsRawPointers; }
+std::vector<CustomColor *> ColorConfig::getDefinedColors() {
+  return colorsRawPointers;
+}
 
 void ColorConfig::parseColor(
     pt::ptree::value_type &v,
