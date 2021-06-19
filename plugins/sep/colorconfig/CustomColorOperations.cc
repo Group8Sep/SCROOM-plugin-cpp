@@ -75,7 +75,7 @@ Scroom::Utils::Stuff OperationsCustomColors::cache(const ConstTile::Ptr tile) {
     int32_t Y = 0;
     int32_t K = 0;
     for (uint16_t j = 0; j < spp; j++) {
-      auto &color = colors.at(j);
+      auto color = colors.at(j);
       CustomColorHelpers::calculateCMYK(color, C, M, Y, K, cur[i + j]);
     }
 
@@ -153,11 +153,7 @@ void OperationsCustomColors::reduce(Tile::Ptr target,
 
 int OperationsCustomColors::getBpp() { return spp * bps; }
 
-void PipetteCommonOperationsCustomColor::setSpp(int samplesPerPixel) {
-  spp = samplesPerPixel;
-}
-
 void PipetteCommonOperationsCustomColor::setColors(
-    std::vector<CustomColor::Ptr> colors_) {
+    std::vector<CustomColor *> colors_) {
   colors = colors_;
 }

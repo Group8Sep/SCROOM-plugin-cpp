@@ -52,65 +52,63 @@ void ColorConfig::loadFile(std::string file) {
     parseColor(v, seenNamesAndAliases);
   }
   addNonExistentDefaultColors();
+  for (auto &color : colors) {
+    colorsRawPointers.push_back(color.get());
+  }
 }
 
 void ColorConfig::addNonExistentDefaultColors() {
 
   // If no cyan configuration exists, add the default configuration
   if (!getColorByNameOrAlias("c")) {
-    CustomColor::Ptr newColour =
-        boost::make_shared<CustomColor>("c", 1, 0, 0, 0);
+    CustomColor::Ptr newColour = std::make_unique<CustomColor>("c", 1, 0, 0, 0);
 
-    colors.push_back(newColour);
+    colors.push_back(std::move(newColour));
   }
 
   // If no magenta configuration exists, add the default configuration
   if (!getColorByNameOrAlias("m")) {
-    CustomColor::Ptr newColour =
-        boost::make_shared<CustomColor>("m", 0, 1, 0, 0);
+    CustomColor::Ptr newColour = std::make_unique<CustomColor>("m", 0, 1, 0, 0);
 
-    colors.push_back(newColour);
+    colors.push_back(std::move(newColour));
   }
 
   // If no yellow configuration exists, add the default configuration
   if (!getColorByNameOrAlias("y")) {
-    CustomColor::Ptr newColour =
-        boost::make_shared<CustomColor>("y", 0, 0, 1, 0);
+    CustomColor::Ptr newColour = std::make_unique<CustomColor>("y", 0, 0, 1, 0);
 
-    colors.push_back(newColour);
+    colors.push_back(std::move(newColour));
   }
 
   // If no key configuration exists, add the default configuration
   if (!getColorByNameOrAlias("k")) {
-    CustomColor::Ptr newColour =
-        boost::make_shared<CustomColor>("k", 0, 0, 0, 1);
+    CustomColor::Ptr newColour = std::make_unique<CustomColor>("k", 0, 0, 0, 1);
 
-    colors.push_back(newColour);
+    colors.push_back(std::move(newColour));
   }
 }
 
-CustomColor::Ptr ColorConfig::getColorByNameOrAlias(std::string name) {
+CustomColor *ColorConfig::getColorByNameOrAlias(std::string name) {
   boost::algorithm::to_lower(name);
-  auto definedColors = getDefinedColors();
   std::string lowerName;
   std::string lowerAlias;
-  for (auto &color : definedColors) {
+  for (auto &color : colors) {
     lowerName = boost::algorithm::to_lower_copy(color->name);
     if (lowerName == name) {
-      return color;
+      return color.get();
     }
 
     for (auto const &alias : color->aliases) {
       lowerAlias = boost::algorithm::to_lower_copy(alias);
       if (lowerAlias == name) {
-        return color;
+        return color.get();
       }
     }
   }
   return nullptr;
 }
 
-std::vector<CustomColor::Ptr> ColorConfig::getDefinedColors() { return colors; }
+std::vector<CustomColor*> ColorConfig::getDefinedColors() { return colorsRawPointers; }
 
 void ColorConfig::parseColor(
     pt::ptree::value_type &v,
@@ -133,8 +131,7 @@ void ColorConfig::parseColor(
   auto m = v.second.get<double>("mMultiplier");
   auto y = v.second.get<double>("yMultiplier");
   auto k = v.second.get<double>("kMultiplier");
-  CustomColor::Ptr newColour =
-      boost::make_shared<CustomColor>(name, c, m, y, k);
+  CustomColor::Ptr newColour = std::make_unique<CustomColor>(name, c, m, y, k);
 
   // Initialise aliases vector
   std::vector<std::string> validAliases = {};
@@ -172,5 +169,5 @@ void ColorConfig::parseColor(
     std::cout << "No aliasses found.\n";
   }
 
-  colors.push_back(newColour);
+  colors.push_back(std::move(newColour));
 }

@@ -45,7 +45,7 @@ bool SepPresentation::load(const std::string &fileName) {
   layer_operations = OperationsCustomColors::create(sep_source->getSpp());
 
   // Set the colors relevant to this tiledbitmap
-  std::vector<CustomColor::Ptr> bitmapColors = {};
+  std::vector<CustomColor *> bitmapColors = {};
   for (auto color : sep_source->getChannels()) {
     bitmapColors.push_back(
         ColorConfig::getInstance().getColorByNameOrAlias(color));
