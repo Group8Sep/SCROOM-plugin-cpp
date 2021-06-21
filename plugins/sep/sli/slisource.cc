@@ -2,6 +2,7 @@
 #include "../colorconfig/CustomColorHelpers.hh"
 #include "../sep-helpers.hh"
 #include "../sepsource.hh"
+#include "slidrawer.hh"
 
 #include <scroom/bitmap-helpers.hh>
 
@@ -26,7 +27,7 @@ void SliSource::computeHeightWidth() {
 
 void SliSource::checkXoffsets() {
   hasXoffsets = false;
-  for (auto layer : layers) {
+  for (const auto& layer : layers) {
     if (layer->xoffset != 0)
       hasXoffsets = true;
   }
@@ -60,7 +61,7 @@ bool SliSource::addLayer(std::string imagePath, std::string filename,
 }
 
 void SliSource::importBitmaps() {
-  for (SliLayer::Ptr layer : layers) {
+  for (const SliLayer::Ptr& layer : layers) {
     auto extension = layer->name.substr(layer->name.find_last_of("."));
     boost::to_lower(extension);
 
@@ -312,11 +313,11 @@ void SliSource::drawCmykXoffset(uint8_t *surfacePointer, uint8_t *bitmap,
                                 Scroom::Utils::Rectangle<int> intersectRect,
                                 int layerBound, int stride,
                                 SliLayer::Ptr layer) {
+  std::array<uint8_t *, 4> addresses;
   for (int i = bitmapStart; i < bitmapStart + bitmapOffset;) {
     int k = i;
-    std::vector<uint8_t *> addresses = {};
-    addresses.push_back(
-        surfacePointer); // Store the address, so it can later be written to
+    addresses[0] =
+        surfacePointer; // Store the address, so it can later be written to
     int32_t C = *surfacePointer; // Initialize the CMYK holder values to the
                                  // current values for their color
     // Advance k and the surface pointer, while keeping the the layer bounds in
@@ -324,33 +325,33 @@ void SliSource::drawCmykXoffset(uint8_t *surfacePointer, uint8_t *bitmap,
     advanceIAndSurfacePointer(layerRect, intersectRect, layerBound, stride,
                               surfacePointer, k);
 
-    addresses.push_back(surfacePointer); // Store the m address
-    int32_t M = *surfacePointer; // Surface pointer has been advanced, so now
-                                 // the M value can be loaded
+    addresses[1] = surfacePointer; // Store the m address
+    int32_t M = *surfacePointer;   // Surface pointer has been advanced, so now
+                                   // the M value can be loaded
     advanceIAndSurfacePointer(layerRect, intersectRect, layerBound, stride,
                               surfacePointer, k);
 
-    addresses.push_back(surfacePointer);
+    addresses[2] = surfacePointer;
     int32_t Y = *surfacePointer;
     advanceIAndSurfacePointer(layerRect, intersectRect, layerBound, stride,
                               surfacePointer, k);
 
-    addresses.push_back(surfacePointer);
+    addresses[3] = surfacePointer;
     int32_t K = *surfacePointer;
     advanceIAndSurfacePointer(layerRect, intersectRect, layerBound, stride,
                               surfacePointer, k);
 
     for (uint16_t j = 0; j < layer->spp;
          j++) { // Add values to the 32bit cmyk holders
-      auto color = layer->channels.at(j);
-      CustomColorHelpers::calculateCMYK(color, C, M, Y, K, bitmap[i + j]);
+      CustomColorHelpers::calculateCMYK(layer->channels.at(j), C, M, Y, K,
+                                        bitmap[i + j]);
     }
     // Write the CMYK values back to the surface, clipped to uint_8
 
-    *(addresses.at(0)) = CustomColorHelpers::toUint8(C);
-    *(addresses.at(1)) = CustomColorHelpers::toUint8(M);
-    *(addresses.at(2)) = CustomColorHelpers::toUint8(Y);
-    *(addresses.at(3)) = CustomColorHelpers::toUint8(K);
+    *(addresses[0]) = CustomColorHelpers::toUint8(C);
+    *(addresses[1]) = CustomColorHelpers::toUint8(M);
+    *(addresses[2]) = CustomColorHelpers::toUint8(Y);
+    *(addresses[3]) = CustomColorHelpers::toUint8(K);
     // set i to the incremented value
     i = k;
   }
@@ -372,6 +373,13 @@ void SliSource::advanceIAndSurfacePointer(
 void SliSource::computeRgb() {
   SurfaceWrapper::Ptr surface = SurfaceWrapper::create();
 
+  // Dependency injection container
+  SliDrawer::Ptr drawer;
+  // If the drawer is the default CMYK drawer, then set it only once, as it does
+  // not need the layer
+  if (defaultCMYK)
+    drawer = SliDrawerCMYK::create();
+
   // Check if cache surface exists first
   if (rgbCache.count(0)) {
     surface = rgbCache[0];
@@ -382,7 +390,7 @@ void SliSource::computeRgb() {
   const int stride = surface->getStride();
   cairo_surface_flush(surface->surface);
   uint8_t *surfaceBegin = cairo_image_surface_get_data(surface->surface);
-  uint32_t *targetBegin = reinterpret_cast<uint32_t *>(surfaceBegin);
+  auto *targetBegin = reinterpret_cast<uint32_t *>(surfaceBegin);
   uint8_t *currentSurfaceByte = surfaceBegin;
 
   // Rectangle (in bytes) of the toggled area
@@ -392,8 +400,10 @@ void SliSource::computeRgb() {
   for (size_t j = 0; j < layers.size(); j++) { // For every layer
     if (!visible[j])
       continue;
-
     auto layer = layers[j];
+    if (!defaultCMYK)
+      drawer = SliDrawerCustomColor::create(layer);
+
     auto bitmap = layer->bitmap.get();
     Scroom::Utils::Rectangle<int> layerRect =
         toBytesRectangle(layer->toRectangle(), layer->spp);
@@ -418,10 +428,10 @@ void SliSource::computeRgb() {
       int layerBound = std::min(intersectRect.getRight() - layerRect.getLeft(),
                                 layerRect.getRight() - layerRect.getLeft()) %
                        layerRect.getWidth();
-      drawCmykXoffset(currentSurfaceByte, bitmap, bitmapStart, bitmapOffset,
-                      layerRect, intersectRect, layerBound, stride, layer);
+      drawer->drawXoffset(currentSurfaceByte, bitmap, bitmapStart, bitmapOffset,
+                          layerRect, intersectRect, layerBound, stride);
     } else {
-      drawCmyk(currentSurfaceByte, bitmap, bitmapStart, bitmapOffset, layer);
+      drawer->draw(currentSurfaceByte, bitmap, bitmapStart, bitmapOffset);
     }
   }
 

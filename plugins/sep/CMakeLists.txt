@@ -12,6 +12,8 @@ target_sources(spsep
         sepsource.hh
         sli/sli-helpers.cc
         sli/sli-helpers.hh
+        sli/slidrawer.cc
+        sli/slidrawer.hh
         sli/slicontrolpanel.cc
         sli/slicontrolpanel.hh
         sli/slilayer.cc

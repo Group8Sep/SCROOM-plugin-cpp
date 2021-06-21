@@ -19,6 +19,7 @@ public:
   /** Width of all layers combined */
   int total_width = 0;
 
+  bool defaultCMYK = true;
   /** Height of all layers combined */
   int total_height = 0;
 

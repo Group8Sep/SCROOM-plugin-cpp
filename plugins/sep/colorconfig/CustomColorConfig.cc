@@ -12,10 +12,20 @@
 
 namespace pt = boost::property_tree;
 
-ColorConfig::ColorConfig() {}
+ColorConfig::ColorConfig() = default;
 
 void ColorConfig::loadFile(std::string file) {
+  // Set the defaultCMYK true, will become false if there is any color defined
+  // in the config file
+  defaultCMYK = true;
   colors.clear();
+
+  // reserve the first 4 spaces for CMYK
+  colors.emplace_back(nullptr);
+  colors.emplace_back(nullptr);
+  colors.emplace_back(nullptr);
+  colors.emplace_back(nullptr);
+
   pt::ptree root;
   boost::filesystem::path full_path(boost::filesystem::current_path());
   if (file == "colours.json") {
@@ -61,7 +71,7 @@ void ColorConfig::addNonExistentDefaultColors() {
     CustomColor::Ptr newColour =
         boost::make_shared<CustomColor>("C", 1, 0, 0, 0);
 
-    colors.push_back(newColour);
+    colors[0] = newColour;
   }
 
   // If no magenta configuration exists, add the default configuration
@@ -69,7 +79,7 @@ void ColorConfig::addNonExistentDefaultColors() {
     CustomColor::Ptr newColour =
         boost::make_shared<CustomColor>("M", 0, 1, 0, 0);
 
-    colors.push_back(newColour);
+    colors[1] = newColour;
   }
 
   // If no yellow configuration exists, add the default configuration
@@ -77,7 +87,7 @@ void ColorConfig::addNonExistentDefaultColors() {
     CustomColor::Ptr newColour =
         boost::make_shared<CustomColor>("Y", 0, 0, 1, 0);
 
-    colors.push_back(newColour);
+    colors[2] = newColour;
   }
 
   // If no key configuration exists, add the default configuration
@@ -85,27 +95,15 @@ void ColorConfig::addNonExistentDefaultColors() {
     CustomColor::Ptr newColour =
         boost::make_shared<CustomColor>("K", 0, 0, 0, 1);
 
-    colors.push_back(newColour);
+    colors[3] = newColour;
   }
 }
 
-CustomColor::Ptr ColorConfig::getColorByNameOrAlias(std::string name) {
-  boost::algorithm::to_upper(name);
+CustomColor::Ptr ColorConfig::getColorByNameOrAlias(const std::string &name) {
   auto definedColors = getDefinedColors();
-  std::string lowerName;
-  std::string lowerAlias;
   for (auto &color : definedColors) {
-    lowerName = boost::algorithm::to_upper_copy(color->name);
-    if (lowerName == name) {
+    if (isColor(color, name))
       return color;
-    }
-
-    for (auto const &alias : color->aliases) {
-      lowerAlias = boost::algorithm::to_upper_copy(alias);
-      if (lowerAlias == name) {
-        return color;
-      }
-    }
   }
   return nullptr;
 }
@@ -172,5 +170,34 @@ void ColorConfig::parseColor(
     std::cout << "No aliasses found.\n";
   }
 
-  colors.push_back(newColour);
+  pushToVector(newColour);
+  defaultCMYK = false;
+}
+
+void ColorConfig::pushToVector(CustomColor::Ptr &color) {
+  std::vector<std::string> defaultColors = {"C", "M", "Y", "K"};
+  for (size_t i = 0; i < defaultColors.size(); i++) {
+    if (isColor(color, defaultColors[i])) {
+      colors[i] = color;
+      return;
+    }
+  }
+  colors.push_back(color);
+}
+
+bool ColorConfig::isColor(CustomColor::Ptr &color, std::string name) {
+  if (color == nullptr)
+    return false;
+
+  boost::algorithm::to_upper(name);
+
+  if (name == color->name)
+    return true;
+
+  if (std::find(color->aliases.begin(), color->aliases.end(), name) !=
+      color->aliases.end()) {
+    return true;
+  }
+
+  return false;
 }

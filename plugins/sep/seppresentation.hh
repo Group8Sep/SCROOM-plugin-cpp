@@ -33,7 +33,12 @@ private:
 
   std::map<std::string, std::string> properties;
 
-  PipetteCommonOperationsCustomColor::Ptr layer_operations;
+  // Layer_operations and pipette_layer need to be seperate, as there is no
+  // generic PipetteCommonOperations To merge this back into one, a class would
+  // need to be made which inherits from both LayerOperations and from
+  // PipetteLayerOperations, which does not exist at the moment.
+  LayerOperations::Ptr layer_operations;
+  PipetteLayerOperations::Ptr pipette_layer;
 
 private:
   /**

@@ -43,7 +43,6 @@ std::list<GtkFileFilter *> Sep::getFilters() {
   gtk_file_filter_add_pattern(filter, "*.sep");
   gtk_file_filter_add_pattern(filter, "*.sli");
   result.push_back(filter);
-
   return result;
 }
 

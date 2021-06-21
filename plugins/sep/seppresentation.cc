@@ -42,15 +42,24 @@ bool SepPresentation::load(const std::string &fileName) {
 
   transform = sep_source->getTransform();
 
-  layer_operations = OperationsCustomColors::create(sep_source->getSpp());
+  if (!ColorConfig::getInstance().defaultCMYK) {
+    auto customColorOperations =
+        OperationsCustomColors::create(sep_source->getSpp());
 
-  // Set the colors relevant to this tiledbitmap
-  std::vector<CustomColor::Ptr> bitmapColors = {};
-  for (auto color : sep_source->getChannels()) {
-    bitmapColors.push_back(
-        ColorConfig::getInstance().getColorByNameOrAlias(color));
+    // Set the colors relevant to this tiledbitmap
+    std::vector<CustomColor::Ptr> bitmapColors = {};
+    for (const auto &color : sep_source->getChannels()) {
+      bitmapColors.push_back(
+          ColorConfig::getInstance().getColorByNameOrAlias(color));
+    }
+    customColorOperations->setColors(bitmapColors);
+    layer_operations = customColorOperations;
+    pipette_layer = customColorOperations;
+  } else {
+    auto cmykOps = OperationsCMYK32::create();
+    layer_operations = cmykOps;
+    pipette_layer = cmykOps;
   }
-  layer_operations->setColors(bitmapColors);
   tbi = createTiledBitmap(width, height, {layer_operations});
   tbi->setSource(sep_source);
 
@@ -184,7 +193,7 @@ SepPresentation::getPixelAverages(Scroom::Utils::Rectangle<int> area) {
           tile_rectangle.intersection(area - base);
 
       pipetteColors = sumPipetteColors(
-          pipetteColors, layer_operations->sumPixelValues(inter_rect, tile));
+          pipetteColors, pipette_layer->sumPixelValues(inter_rect, tile));
     }
   }
 

@@ -23,13 +23,17 @@ private:
   std::vector<CustomColor::Ptr> colors;
 
 public:
+  bool defaultCMYK = true;
+
   static ColorConfig &getInstance() {
     static ColorConfig INSTANCE;
     return INSTANCE;
   }
 
   std::vector<CustomColor::Ptr> getDefinedColors();
-  CustomColor::Ptr getColorByNameOrAlias(std::string name);
+
+  CustomColor::Ptr getColorByNameOrAlias(const std::string &name);
+
   void loadFile(std::string file = "colours.json");
 
   void addNonExistentDefaultColors();
@@ -37,4 +41,14 @@ public:
 private:
   void parseColor(pt::ptree::value_type &v,
                   std::unordered_set<std::string> &seenNamesAndAliases);
+
+  static bool isColor(CustomColor::Ptr &color, std::string name);
+  /**
+   * Push the color to the vector
+   * Makes sure that, if the color is C, M, Y, K,
+   * that it will be placed in the correct of the first four places in the
+   * vector
+   * @param color
+   */
+  void pushToVector(CustomColor::Ptr &color);
 };
